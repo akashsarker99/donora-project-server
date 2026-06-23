@@ -30,6 +30,7 @@ const run = async () => {
         await client.connect();
        const db = client.db('donora-project');
        const paymentCollection = db.collection('payments')
+       const requestCollection = db.collection('requests')
 
 
         app.get('/payment', async(req, res) =>{
@@ -41,7 +42,15 @@ const run = async () => {
             const result = await paymentCollection.insertOne({...data, createdAt: new Date()});
             res.json(result);
         })
-
+        app.get('/request', async(req, res) =>{
+            const result = await requestCollection.find().toArray();
+            res.json(result);
+        })
+        app.post('/request', async(req, res)=>{
+            const data = req.body;
+            const result = await requestCollection.insertOne({...data, createdAt: new Date()});
+            res.json(result);
+        })
 
         await client.db("admin").command({ ping: 1});
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
