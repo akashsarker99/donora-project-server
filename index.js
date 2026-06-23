@@ -31,6 +31,11 @@ const run = async () => {
        const db = client.db('donora-project');
        const paymentCollection = db.collection('payments')
 
+
+        app.get('/payment', async(req, res) =>{
+            const result = await paymentCollection.find().toArray();
+            res.json(result);
+        })
         app.post('/payment', async(req, res)=>{
             const data = req.body;
             const result = await paymentCollection.insertOne({...data, createdAt: new Date()});
