@@ -1,7 +1,7 @@
 const express = require('express')
 const dotenv = require('dotenv')
 const cors = require('cors')
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 dotenv.config();
 
 const app = express();
@@ -43,12 +43,30 @@ const run = async () => {
             res.json(result);
         })
         app.get('/request', async(req, res) =>{
-            const result = await requestCollection.find().toArray();
+            const status = req.query.status;
+            const query = {}
+            if(status){
+                query.requestStatus = status;
+            }
+            const result = await requestCollection.find(query).toArray();
             res.json(result);
         })
         app.post('/request', async(req, res)=>{
             const data = req.body;
             const result = await requestCollection.insertOne({...data, createdAt: new Date()});
+            res.json(result);
+        })
+        app.get('/request/:id', async(req, res) =>{
+            const {id} = req.params;
+            console.log(id)
+            const result = await requestCollection.findOne({_id: new ObjectId(id)});
+            res.json(result || {});
+        })
+        app.patch('/request/:id', async(req, res) =>{
+            const {id} = req.params;
+            const data = req.body;
+            console.log(data)
+            const result = await requestCollection.updateOne({_id: new ObjectId(id)}, {$set: data});
             res.json(result);
         })
 
