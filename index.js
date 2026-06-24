@@ -65,6 +65,13 @@ const run = async () => {
          const result = await userCollection.findOne(query)
          res.json(result || {});
         })
+
+        app.patch('/users/:email', async(req, res)=>{
+            const {email} = req.params;
+            const data = req.body;
+            const result = await userCollection.updateOne({ email }, { $set: data });
+            res.json(result);
+        })
         
         app.get('/payment', async(req, res) =>{
             const result = await paymentCollection.find().toArray();
@@ -77,9 +84,13 @@ const run = async () => {
         })
         app.get('/request', async(req, res) =>{
             const status = req.query.status;
+            const email = req.query.email;
             const query = {}
             if(status){
                 query.requestStatus = status;
+            }
+            if(email){
+                query.requesterEmail = email;
             }
             const result = await requestCollection.find(query).toArray();
             res.json(result);
@@ -98,10 +109,16 @@ const run = async () => {
         app.patch('/request/:id', async(req, res) =>{
             const {id} = req.params;
             const data = req.body;
-            console.log(data)
             const result = await requestCollection.updateOne({_id: new ObjectId(id)}, {$set: data});
             res.json(result);
         })
+        app.delete('/request/:id', async (req, res) => {
+            const { id } = req.params;
+            console.log("deleting", id);
+            const result = await requestCollection.deleteOne({_id: new ObjectId(id)});
+            res.json(result);
+            console.log('result', result);
+        });
 
         await client.db("admin").command({ ping: 1});
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
