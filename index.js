@@ -31,8 +31,41 @@ const run = async () => {
        const db = client.db('donora-project');
        const paymentCollection = db.collection('payments')
        const requestCollection = db.collection('requests')
+       const userCollection = db.collection('user');
+       
+      app.post('/users', async (req, res) => {
+  const user = req.body;
+  const existingUser = await userCollection.findOne({email: user.email});
+  if (existingUser) {
+    const result = await userCollection.updateOne(
+      { email: user.email },
+      {
+        $set: {
+          bloodGroup: user.bloodGroup,
+          district: user.district,
+          upazila: user.upazila,
+          role: user.role,
+          status: user.status,
+          image: user.image,
+        },
+      }
+    );
 
-
+    return res.json(result);
+  }
+  const result = await userCollection.insertOne(user);
+  res.json(result);
+});
+       app.get('/users', async(req, res) =>{
+         const email = req.query.email;
+         const query = {}
+         if(email){
+            query.email = email;
+         }
+         const result = await userCollection.findOne(query)
+         res.json(result || {});
+        })
+        
         app.get('/payment', async(req, res) =>{
             const result = await paymentCollection.find().toArray();
             res.json(result);
