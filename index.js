@@ -31,39 +31,45 @@ const run = async () => {
        const db = client.db('donora-project');
        const paymentCollection = db.collection('payments')
        const requestCollection = db.collection('requests')
-       const userCollection = db.collection('users');
-
-       app.get('/users', async (req, res)=>{
-           const result = await userCollection.find().toArray();    
-           res.json(result);
-       })
+       const userCollection = db.collection('user');
        
       app.post('/users', async (req, res) => {
+      const user = req.body;
+       const existingUser = await userCollection.findOne({email: user.email});     
+    if (existingUser) {
+      const result = await userCollection.updateOne(
+      { email: user.email },
+      {
+        $set: {
+          bloodGroup: user.bloodGroup,
+          district: user.district,
+          upazila: user.upazila,
+          role: user.role,
+          status: user.status,
+          image: user.image,
+        },
+      }
+    );
 
-        const data = req.body;
-        const result = await userCollection.insertOne({...data, createdAt: new Date()});
-        res.json(result);
-        console.log(result);
-});
-       app.get('/users', async(req, res) =>{
-         const email = req.query.email;
-         const query = {}
-         if(email){
-            query.email = email;
-         }
-          if (query) {
-         const result = await userCollection.findOne(query);
-          return res.json(result || {});
-        }
-
-  const result = await userCollection.find().toArray();
+    return res.json(result);
+  }
+  const result = await userCollection.insertOne(user);
   res.json(result);
-        })
+});
+         app.get("/users", async (req, res) => {
+            const { email } = req.query;
 
+          if (email) {
+                const user = await userCollection.findOne({ email });
+                return res.json(user || {});
+            }
+        const users = await userCollection.find().toArray();
+         res.json(users);
+        });
         app.patch('/users/:email', async(req, res)=>{
             const {email} = req.params;
             const data = req.body;
-            const result = await userCollection.updateOne({ email }, { $set: data });
+            const result = await userCollection.updateOne({ email }, { $set: {...data, updatedAt: new Date()} });
             res.json(result);
         })
         
