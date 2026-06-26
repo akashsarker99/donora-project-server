@@ -119,6 +119,26 @@ const run = async () => {
             console.log('result', result);
         });
 
+        app.get("/users/search", async (req, res) => {
+            const {bloodGroup, district, upazila} = req.query;
+            const query = {
+                role: "donor",
+                status: "active",
+                  };
+            if (bloodGroup) {
+              query.bloodGroup = bloodGroup;
+            }
+            if (district) {
+              query.district = district;
+            }
+            if (upazila) {
+              query.upazila = upazila;
+            }
+            const result = await userCollection.find(query).toArray();
+            console.log(query)
+            res.json(result);
+});
+
         await client.db("admin").command({ ping: 1});
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     }
