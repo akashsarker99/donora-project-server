@@ -146,6 +146,31 @@ const run = async () => {
             res.json({totalDonors,activeRequests,totalFunding});
         });
 
+        app.get("/donationpage", async(req, res)=>{
+          const {page= 1, limit= 8} = req.query;
+          const skip = (page - 1) * limit;
+          const result = await requestCollection.find({requestStatus: "pending"}).skip(skip).limit(Number(limit)).toArray();
+          const totalData = await requestCollection.countDocuments({requestStatus: "pending"});
+          const totalPages = Math.ceil(totalData / Number(limit));
+          res.json({data: result, pageNumber: Number(page), totalPages});
+        })
+        app.get('/alldonationpage', async(req, res)=>{
+           const {page= 1, limit= 10} = req.query;
+          const skip = (page - 1) * limit;
+          const result = await requestCollection.find().skip(skip).limit(Number(limit)).toArray();
+          const totalData = await requestCollection.countDocuments();
+          const totalPages = Math.ceil(totalData / Number(limit));
+          res.json({data: result, pageNumber: Number(page), totalPages});
+        })
+        app.get('/alluserpage', async(req, res)=>{
+           const {page= 1, limit= 10} = req.query;
+          const skip = (page - 1) * limit;
+          const result = await userCollection.find().skip(skip).limit(Number(limit)).toArray();
+          const totalData = await userCollection.countDocuments();
+          const totalPages = Math.ceil(totalData / Number(limit));
+          res.json({data: result, pageNumber: Number(page), totalPages});
+        })
+
         await client.db("admin").command({ ping: 1});
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     }
