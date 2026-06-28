@@ -2,6 +2,7 @@ const express = require('express')
 const dotenv = require('dotenv')
 const cors = require('cors')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { createRemoteJWKSet, jwtVerify } = require('jose-cjs');
 dotenv.config();
 
 const app = express();
@@ -24,15 +25,35 @@ const client = new MongoClient(uri, {
   }
 });
 
+const JWKS = createRemoteJWKSet(new URL(`${process.env.CLIENT_URL}/api/auth/jwks`));
+
+const verifyToken = async (req, res, next) =>{
+  const authHeader = req?.headers.authorization
+  if(!authHeader){
+    return res.status(401).json({message: "Unauthorized"})
+  }
+  const token = authHeader.split(" ")[1]
+    if(!token){
+    return res.status(401).json({message: "Unauthorized"})
+  }
+   try {
+    const {payload} = await jwtVerify(token, JWKS)
+    console.log(payload)
+    next();
+   } catch (error) {
+      res.status(403).json({message: "Forbidden"})
+   }
+}
+
 const run = async () => {
     try {
-        await client.connect();
+        // await client.connect();
        const db = client.db('donora-project');
        const paymentCollection = db.collection('payments')
        const requestCollection = db.collection('requests')
        const userCollection = db.collection('user');
        
-      app.post('/users', async (req, res) => {
+      app.post('/users',verifyToken, async (req, res) => {
       const user = req.body;
        const existingUser = await userCollection.findOne({email: user.email});     
     if (existingUser) {
@@ -56,7 +77,7 @@ const run = async () => {
   res.json(result);
 });
 
-         app.get("/users", async (req, res) => {
+         app.get("/users",verifyToken, async (req, res) => {
             const { email } = req.query;
 
           if (email) {
@@ -66,18 +87,18 @@ const run = async () => {
         const users = await userCollection.find().toArray();
          res.json(users);
         });
-        app.patch('/users/:email', async(req, res)=>{
+        app.patch('/users/:email',verifyToken, async(req, res)=>{
             const {email} = req.params;
             const data = req.body;
             const result = await userCollection.updateOne({ email }, { $set: {...data, updatedAt: new Date()} });
             res.json(result);
         })
         
-        app.get('/payment', async(req, res) =>{
+        app.get('/payment',verifyToken, async(req, res) =>{
             const result = await paymentCollection.find().toArray();
             res.json(result);
         })
-        app.post('/payment', async(req, res)=>{
+        app.post('/payment',verifyToken, async(req, res)=>{
             const data = req.body;
             const result = await paymentCollection.insertOne({...data, createdAt: new Date()});
             res.json(result);
@@ -95,23 +116,23 @@ const run = async () => {
             const result = await requestCollection.find(query).toArray();
             res.json(result);
         })
-        app.post('/request', async(req, res)=>{
+        app.post('/request',verifyToken, async(req, res)=>{
             const data = req.body;
             const result = await requestCollection.insertOne({...data, createdAt: new Date()});
             res.json(result);
         })
-        app.get('/request/:id', async(req, res) =>{
+        app.get('/request/:id',verifyToken, async(req, res) =>{
             const {id} = req.params;
             const result = await requestCollection.findOne({_id: new ObjectId(id)});
             res.json(result || {});
         })
-        app.patch('/request/:id',  async(req, res) =>{
+        app.patch('/request/:id',verifyToken,  async(req, res) =>{
             const {id} = req.params;
             const data = req.body;
             const result = await requestCollection.updateOne({_id: new ObjectId(id)}, {$set: data});
             res.json(result);
         })
-        app.delete('/request/:id', async (req, res) => {
+        app.delete('/request/:id',verifyToken, async (req, res) => {
             const { id } = req.params;
             const result = await requestCollection.deleteOne({_id: new ObjectId(id)});
             res.json(result);
@@ -134,8 +155,9 @@ const run = async () => {
             }
             const result = await userCollection.find(query).toArray();
             console.log(query)
+            console.log(result)
             res.json(result);
-});
+        });
 
         app.get("/stats", async (req, res) => {
             const totalDonors = await userCollection.countDocuments({role: "donor",status: "active"});
@@ -154,7 +176,7 @@ const run = async () => {
           const totalPages = Math.ceil(totalData / Number(limit));
           res.json({data: result, pageNumber: Number(page), totalPages});
         })
-        app.get('/alldonationpage', async(req, res)=>{
+        app.get('/alldonationpage',verifyToken, async(req, res)=>{
            const {page= 1, limit= 10} = req.query;
           const skip = (page - 1) * limit;
           const result = await requestCollection.find().skip(skip).limit(Number(limit)).toArray();
@@ -162,16 +184,17 @@ const run = async () => {
           const totalPages = Math.ceil(totalData / Number(limit));
           res.json({data: result, pageNumber: Number(page), totalPages});
         })
-        app.get('/alluserpage', async(req, res)=>{
-           const {page= 1, limit= 10} = req.query;
+        app.get('/alluserpage',verifyToken, async(req, res)=>{
+           const {page = 1, limit= 8} = req.query;
           const skip = (page - 1) * limit;
           const result = await userCollection.find().skip(skip).limit(Number(limit)).toArray();
           const totalData = await userCollection.countDocuments();
           const totalPages = Math.ceil(totalData / Number(limit));
+          console.log(page)
           res.json({data: result, pageNumber: Number(page), totalPages});
         })
 
-        await client.db("admin").command({ ping: 1});
+        // await client.db("admin").command({ ping: 1});
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     }
     finally {
