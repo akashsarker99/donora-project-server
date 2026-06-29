@@ -38,12 +38,30 @@ const verifyToken = async (req, res, next) =>{
   }
    try {
     const {payload} = await jwtVerify(token, JWKS)
-    console.log(payload)
+    req.user = payload
+    console.log(req.user)
     next();
    } catch (error) {
       res.status(403).json({message: "Forbidden"})
    }
 }
+
+const verifyAdmin = async (req, res, next) =>{
+  const user = req.user;
+  if(user.role !== "admin"){
+    return res.status(401).json({message: "Unauthorized"})
+  }
+  next();
+}
+const verifyAdminVolunteer = async (req, res, next) =>{
+  const user = req.user;
+  if(user.role === "admin" || user.role === "volunteer"){
+    next();
+  }else{
+  return res.status(403).json({message: "Forbidden"});  
+}
+}
+
 
 const run = async () => {
     try {
@@ -154,8 +172,6 @@ const run = async () => {
               query.upazila = upazila;
             }
             const result = await userCollection.find(query).toArray();
-            console.log(query)
-            console.log(result)
             res.json(result);
         });
 
@@ -176,7 +192,7 @@ const run = async () => {
           const totalPages = Math.ceil(totalData / Number(limit));
           res.json({data: result, pageNumber: Number(page), totalPages});
         })
-        app.get('/alldonationpage',verifyToken, async(req, res)=>{
+        app.get('/alldonationpage',verifyToken, verifyAdminVolunteer, async(req, res)=>{
            const {page= 1, limit= 10} = req.query;
           const skip = (page - 1) * limit;
           const result = await requestCollection.find().skip(skip).limit(Number(limit)).toArray();
@@ -184,7 +200,7 @@ const run = async () => {
           const totalPages = Math.ceil(totalData / Number(limit));
           res.json({data: result, pageNumber: Number(page), totalPages});
         })
-        app.get('/alluserpage',verifyToken, async(req, res)=>{
+        app.get('/alluserpage',verifyToken, verifyAdmin,async(req, res)=>{
            const {page = 1, limit= 8} = req.query;
           const skip = (page - 1) * limit;
           const result = await userCollection.find().skip(skip).limit(Number(limit)).toArray();
