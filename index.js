@@ -39,7 +39,6 @@ const verifyToken = async (req, res, next) =>{
    try {
     const {payload} = await jwtVerify(token, JWKS)
     req.user = payload
-    console.log(req.user)
     next();
    } catch (error) {
       res.status(403).json({message: "Forbidden"})
@@ -71,7 +70,7 @@ const run = async () => {
        const requestCollection = db.collection('requests')
        const userCollection = db.collection('user');
        
-      app.post('/users',verifyToken, async (req, res) => {
+      app.post('/users', async (req, res) => {
       const user = req.body;
        const existingUser = await userCollection.findOne({email: user.email});     
     if (existingUser) {
@@ -105,7 +104,7 @@ const run = async () => {
         const users = await userCollection.find().toArray();
          res.json(users);
         });
-        app.patch('/users/:email',verifyToken, async(req, res)=>{
+        app.patch('/users/:email', async(req, res)=>{
             const {email} = req.params;
             const data = req.body;
             const result = await userCollection.updateOne({ email }, { $set: {...data, updatedAt: new Date()} });
